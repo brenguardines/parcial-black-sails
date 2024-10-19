@@ -80,7 +80,6 @@ class Ubicacion {
   const property posicionOceano
   const property coordenadaX 
   const property coordenadaY
-  const property distanciaMinimaDeConflicto
 
   method estaEnMismoOceano(otraUbicacion) = self.posicionOceano() == otraUbicacion.posicionOceano()
 
@@ -89,8 +88,12 @@ class Ubicacion {
 
   method distanciaDeConflicto(otraEmbarcacion) = 
         self.estaEnMismoOceano(otraEmbarcacion.posicionOceano()) && 
-        self.distancia(otraEmbarcacion.ubicacion()) <= distanciaMinimaDeConflicto
+        self.distancia(otraEmbarcacion.ubicacion()) <= ubicacion.distanciaMaximaDeConflicto()
 
+}
+
+object ubicacion{
+  var property distanciaMaximaDeConflicto = 100
 }
 
 //En la embarcación están el capitán, el contramaestre y la tripulación general (piratas); 
