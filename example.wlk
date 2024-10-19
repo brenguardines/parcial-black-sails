@@ -28,7 +28,9 @@ class Embarcacion {
   method modificarBotin(cantidad){
     botin += cantidad
   }
-  
+
+  //pirata de inteligencia mayor a 50
+  method tieneHabilNegociador() = tripulacion.any{tripulante => tripulante.inteligencia() > 50}
 
   //Punto 1
   /* Calcular el poder de daño de una embarcación, 
@@ -117,6 +119,7 @@ class Tripulacion{
   }
 
   method coraje() = piratas.sum{pirata => pirata.coraje()}
+  
 }
 
 /*
@@ -138,7 +141,6 @@ class Tripulante {
   method aumentarCorajeBase(cantCoraje) {
     corajeBase += cantCoraje
   }
-
 }
 
 /*
@@ -172,9 +174,11 @@ object canion {
 
 //Cuchillo: Todos los cuchillos tienen la misma cantidad de daño, que puede variar a nivel general, es decir para todos.
 class Cuchillo {
-  var property danio = 1
+  method danio(tripulante) = cuchillo.danio()
+}
 
-  method danio(tripulante) = danio
+object cuchillo {
+  var property danio = 1
 }
 
 //Espada: Cada espada tiene su complejidad, por lo tanto el daño es específico para cada una.
@@ -233,7 +237,7 @@ Como resultado de la batalla, las embarcaciones se mezclan:
 (los de mayor coraje, para poder controlar a los otrora enemigos).
 */
 
-class Batalla inherits Contienda {
+object batalla inherits Contienda {
   override method puedeVencer(embarcacionGanadora, embarcacionPerdedora) = embarcacionGanadora.poderDanio() > embarcacionPerdedora.poderDanio()
 
   override method tomar(embarcacionGanadora, embarcacionPerdedora){
@@ -251,7 +255,7 @@ que es un pirata de inteligencia mayor a 50.
 Como resultado, la mitad del botín de la segunda pasa a la primera. 
 */
 
-class Negociacion inherits Contienda {
+object negociacion inherits Contienda {
   override method puedeVencer(embarcacionGanadora, embarcacionPerdedora) = embarcacionGanadora.tieneHabilNegociador()
 
   override method tomar(embarcacionGanadora, embarcacionPerdedora){
