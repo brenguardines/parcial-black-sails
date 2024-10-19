@@ -21,6 +21,10 @@ class Embarcacion {
     tripulacion.cambiarCapitan(nuevoCapitan)
   }
 
+  method cambiarContramaestre(nuevoContramaestre) {
+    tripulacion.cambiarContramaestre(nuevoContramaestre)
+  }
+
   method modificarBotin(cantidad){
     botin += cantidad
   }
@@ -34,7 +38,7 @@ class Embarcacion {
 
   method poderDanio() = tripulacion.coraje() + self.totalDanio()
 
-  method totalDanio() = caniones.sum{arma => arma.danio()}
+  method totalDanio() = caniones.sum{canion => canion.danio()}
 
   //Punto 2
   // Obtener al tripulante más corajudo de la embarcación (que no es capitán, ni contramaestre).
@@ -48,20 +52,44 @@ class Embarcacion {
   siempre y cuando correspondan al mismo océano. Nota: Utilizar el cálculo de distancia entre dos puntos.
   */
 
-  method puedenEntrarEnConflicto(otraEmbarcacion, distanciaPosible) = 
-            self.ubicacion().estaEnMismoOceano(otraEmbarcacion.ubicacion()) &&
-            self.ubicacion().distancia(otraEmbarcacion.ubicacion() <= distanciaPosible)
+  method puedenEntrarEnConflicto(otraEmbarcacion) = 
+            self.ubicacion().distanciaDeConflicto(otraEmbarcacion)
+
+  //Punto 5
+  /*
+  Ante un motín, el capitán es expulsado de la embarcación si es que tiene menor coraje que el contramaestre, 
+  y a su vez el pirata de mayor coraje se convierte en el nuevo contramaestre; si, en cambio, el capitán tiene mayor o igual coraje, 
+  resiste al motín y el contramaestre pierde sus armas, se le da una espada desafilada (de daño 1) 
+  y pasa a ser parte de la tripulación como un pirata cualquiera. 
+  En este caso también, el pirata de mayor coraje se convierte en contramaestre.
+  */
+
+  method generarMotin() {
+    if(tripulacion.capitan().coraje() < tripulacion.contramaestre().coraje()){
+      self.cambiarCapitan(tripulacion.contramaestre())
+      self.cambiarContramaestre(tripulacion.pirataMasCorajudo())
+    }else{
+      //faltaria aca guardar al pirata que era el antiguo contramaestre en una variable, sacarle las armas y darle una espada desafilada
+      tripulacion.contramaestre().perderArmas().cambiarContramaestre(tripulacion.pirataMasCorajudo())
+    }
+    
+  }
 }
 
 class Ubicacion {
   const property posicionOceano
   const property coordenadaX 
   const property coordenadaY
+  const property distanciaMinimaDeConflicto
 
-  method estaEnMismoOceano(otraUbicacion) = posicionOceano == otraUbicacion.posicionOceano()
+  method estaEnMismoOceano(otraUbicacion) = self.posicionOceano() == otraUbicacion.posicionOceano()
 
-  method distancia(otraUbicacion) = ((coordenadaX - otraUbicacion.coordenadaX()) + 
-                                    (coordenadaY - otraUbicacion.coordenadaY()))
+  method distancia(otraUbicacion) = ((coordenadaX - otraUbicacion.coordenadaX()).square() + 
+                                    (coordenadaY - otraUbicacion.coordenadaY()).square() ).squareRoot()
+
+  method distanciaDeConflicto(otraEmbarcacion) = 
+        self.estaEnMismoOceano(otraEmbarcacion.posicionOceano()) && 
+        self.distancia(otraEmbarcacion.ubicacion()) <= distanciaMinimaDeConflicto
 
 }
 
@@ -75,11 +103,17 @@ class Tripulacion{
     capitan = nuevoCapitan
   }
 
+  method cambiarContramaestre(nuevoContramaestre) {
+    contramaestre = nuevoContramaestre
+  }
+
   method pirataMasCorajudo() = piratas.max{pirata => pirata.coraje()}
 
   method aumentarCorajeBase(cantCoraje) {
     piratas.forEach{pirata => pirata.aumentarCorajeBase(cantCoraje)}
   }
+
+  method coraje() = piratas.sum{pirata => pirata.coraje()}
 }
 
 /*
@@ -124,8 +158,17 @@ class Canion {
   }
 }
 
+//Punto 6
+//Representar la fabricación de un cañón.
+object canion {
+  //John estima que en este momento es de 350
+  const danioBaseFabricacion = 350
+
+  method crear() = new Canion(danioBase = danioBaseFabricacion, antiguedad = 0)
+}
+
 //Cuchillo: Todos los cuchillos tienen la misma cantidad de daño, que puede variar a nivel general, es decir para todos.
-object cuchillo {
+class Cuchillo {
   var property danio = 1
 
   method danio(tripulante) = danio
@@ -170,9 +213,8 @@ class Contienda {
   Tener en cuenta que dependiendo de la toma de la embarcación pasan cosas distintas.
 
   */
-  method puedeVencer(embarcacionGanadora, embarcacionPerdedora) {}
-  method resultado(embarcacionGanadora, embarcacionPerdedora) {}
-  method tomar(embarcacionGanadora, embarcacionPerdedora) {}
+  method puedeVencer(embarcacionGanadora, embarcacionPerdedora)
+  method tomar(embarcacionGanadora, embarcacionPerdedora)
 }
 
 /*
@@ -196,6 +238,7 @@ class Batalla inherits Contienda {
     embarcacionPerdedora.removerCobardes(3)
     embarcacionPerdedora.cambiarCapitan(embarcacionGanadora.contramestre())
     embarcacionGanadora.cambiarContramestre()
+    embarcacionPerdedora.agregarTripulantes(embarcacionGanadora.removerCorajudos(3))
   }
 }
 
@@ -208,10 +251,65 @@ Como resultado, la mitad del botín de la segunda pasa a la primera.
 class Negociacion inherits Contienda {
   override method puedeVencer(embarcacionGanadora, embarcacionPerdedora) = embarcacionGanadora.tieneHabilNegociador()
 
-  override method resultado(embarcacionGanadora, embarcacionPerdedora){
+  override method tomar(embarcacionGanadora, embarcacionPerdedora){
     const mitadBotin = embarcacionPerdedora.botin() / 2
     embarcacionGanadora.modificarBotin(mitadBotin)
     embarcacionPerdedora.modificarBotin(-mitadBotin)
 
   }
 }
+
+/*
+Todas las bestias tienen un nivel de fuerza y al cruzarse con la embarcación son capaces de producir gran daño, 
+siempre y cuando esta fuerza sea superior al poder de daño de la embarcación. Caso contrario, nada pasa.
+*/
+
+class Bestia{
+  const nivelDeFuerza
+
+  method tieneFuerzaSuperior(embarcacion) = nivelDeFuerza > embarcacion.poderDanio()
+
+  method producirDanio(embarcacion){
+    if(self.tieneFuerzaSuperior(embarcacion)){
+      self.afectar(embarcacion)
+    }
+  }
+
+  method afectar(embarcacion)
+}
+
+//Punto 7
+
+/*
+Ballenas Azules: son los animales más grandes del planeta y suelen embestir fuertemente a las embarcaciones, 
+sacudiéndolas de manera insólita. Al hacerlo, todos los cañones se golpean y sufren de forma tal que es como si envejecieran 8 años.
+*/
+class BallenasAzules inherits Bestia{
+  override method afectar(embarcacion){
+    embarcacion.envejecerCaniones(8)
+  }
+}
+
+/*
+Tiburones blancos: este animal, al acechar la embarcación, causa pavor en la tripulación. 
+Su efecto hace más cobardes a todos, una cantidad que depende de cada tiburón.
+*/
+class TiburonesBlancos inherits Bestia{
+  const cantidadTiburon
+  override method afectar(embarcacion){
+    embarcacion.hacerCobardes(cantidadTiburon)
+  }
+}
+
+/*
+¡Kraken! Volvió... y más malo que nunca. Su fuerza descomunal es de 100000 y al hacerle daño a una embarcación 
+se come los 5 piratas más corajudos (que son los que salen a enfrentarlo, queriendo pasar a la historia... 
+y, bueno, pasan a la historia, pero en otro sentido), a los cuales atrapa con sus enormes tentáculos
+*/
+class Kraken inherits Bestia{
+  const fuerza = 100000
+  override method afectar(embarcacion){
+    5.times(embarcacion.quitarPiratas(embarcacion.pirataMasCorajudo()))
+  }
+}
+
